@@ -1,0 +1,14 @@
+[build-system]
+requires = ["maturin>=1.5,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "hexagents-rust"
+version = "0.1.0"
+description = "Rust hotspots for hexagents, behind driven ports — never a layer of its own."
+requires-python = ">=3.12"
+
+[tool.maturin]
+manifest-path = "crates/hexagents-core/Cargo.toml"
+module-name = "hexagents_rust"
+strip = true

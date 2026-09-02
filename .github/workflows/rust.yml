@@ -1,0 +1,179 @@
+name: Rust
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "rust/**"
+      - "src/backend/hexagents/infrastructure/adapters/secondary/llm/cost/**"
+      - "src/backend/hexagents/infrastructure/adapters/secondary/tools/arg_coercer_rust.py"
+      - "src/backend/hexagents/infrastructure/adapters/secondary/tools/executor.py"
+      - "src/backend/hexagents/infrastructure/adapters/secondary/tools/factory.py"
+      - "src/backend/hexagents/application/service/tool/arg_coercion.py"
+      - "src/backend/hexagents/tests/unit/test_*cost_estimator*.py"
+      - "src/backend/hexagents/tests/unit/test_arg_coerc*.py"
+      - "src/backend/hexagents/infrastructure/adapters/secondary/trajectory/**"
+      - "src/backend/hexagents/tests/unit/test_*trajectory*.py"
+      - "src/backend/hexagents/tests/unit/test_jsonl.py"
+      - "src/backend/hexagents/infrastructure/adapters/secondary/llm/chat_rust.py"
+      - "src/backend/hexagents/infrastructure/adapters/secondary/llm/chat_completions.py"
+      - "src/backend/hexagents/infrastructure/adapters/secondary/llm/chat_completions_factory.py"
+      - "src/backend/hexagents/infrastructure/adapters/secondary/llm/registry.py"
+      - "src/backend/hexagents/tests/unit/test_chat_rust.py"
+      - "src/backend/hexagents/tests/unit/test_chat_parity.py"
+      - "src/backend/hexagents/tests/unit/test_chat_completions*.py"
+      - ".github/workflows/rust.yml"
+  pull_request:
+    paths:
+      - "rust/**"
+      - "src/backend/hexagents/infrastructure/adapters/secondary/llm/cost/**"
+      - "src/backend/hexagents/infrastructure/adapters/secondary/tools/arg_coercer_rust.py"
+      - "src/backend/hexagents/infrastructure/adapters/secondary/tools/executor.py"
+      - "src/backend/hexagents/infrastructure/adapters/secondary/tools/factory.py"
+      - "src/backend/hexagents/application/service/tool/arg_coercion.py"
+      - "src/backend/hexagents/tests/unit/test_*cost_estimator*.py"
+      - "src/backend/hexagents/tests/unit/test_arg_coerc*.py"
+      - "src/backend/hexagents/infrastructure/adapters/secondary/trajectory/**"
+      - "src/backend/hexagents/tests/unit/test_*trajectory*.py"
+      - "src/backend/hexagents/tests/unit/test_jsonl.py"
+      - "src/backend/hexagents/infrastructure/adapters/secondary/llm/chat_rust.py"
+      - "src/backend/hexagents/infrastructure/adapters/secondary/llm/chat_completions.py"
+      - "src/backend/hexagents/infrastructure/adapters/secondary/llm/chat_completions_factory.py"
+      - "src/backend/hexagents/infrastructure/adapters/secondary/llm/registry.py"
+      - "src/backend/hexagents/tests/unit/test_chat_rust.py"
+      - "src/backend/hexagents/tests/unit/test_chat_parity.py"
+      - "src/backend/hexagents/tests/unit/test_chat_completions*.py"
+      - ".github/workflows/rust.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Fast pure-Rust gate: fmt + clippy + cargo test, on the primary dev platform.
+  # No Python involved — this is what a contributor without maturin runs.
+  rust-check:
+    name: cargo fmt + clippy + test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rust
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+      - name: cargo fmt --check
+        run: cargo fmt --check
+      - name: cargo clippy -D warnings
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: cargo test
+        run: cargo test --workspace
+
+  # Wheel build matrix — the explicit set of platforms hexagents_rust supports.
+  # Target list (OS x arch), matching the project's own primary distribution
+  # targets: Linux (glibc x86_64/aarch64) for servers/containers, macOS
+  # (Intel + Apple Silicon) and Windows x86_64 for local dev machines.
+  # Release-packaging check, not a per-PR correctness check — rust-check +
+  # parity already prove correctness on every PR. Building all 5 wheels is
+  # expensive (aarch64 Linux runs under QEMU in a manylinux container; macOS
+  # and Windows runners are scarcer/pricier than Linux), so it only runs on
+  # push to main, where it matters (is this actually distributable).
+  build-wheels:
+    name: maturin build (${{ matrix.target }} on ${{ matrix.os }})
+    if: github.event_name == 'push'
+    needs: rust-check
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64
+          - os: ubuntu-latest
+            target: aarch64
+          - os: macos-13 # Intel runner
+            target: x86_64
+          - os: macos-latest # Apple Silicon runner
+            target: aarch64
+          - os: windows-latest
+            target: x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build wheel
+        uses: PyO3/maturin-action@v1
+        with:
+          working-directory: rust
+          target: ${{ matrix.target }}
+          # manylinux builds run inside a container (no bare `python3` on
+          # PATH there — only versioned interpreters under /opt/python/), so
+          # the interpreter must be named explicitly rather than relying on
+          # the host's actions/setup-python, which never reaches the container.
+          args: --release --out dist --interpreter python3.12
+          manylinux: ${{ (matrix.os == 'ubuntu-latest' && 'auto') || '' }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}-${{ matrix.target }}
+          path: rust/dist
+
+  # Parity: the Rust and Python cost estimators must agree on every input.
+  # Builds the extension into the backend's own venv and runs the backend
+  # suite (the parity test skips itself if the module isn't importable, so
+  # this step also proves the module actually loads, not just that it builds).
+  parity:
+    name: Python/Rust parity test
+    needs: rust-check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+      - name: Install Poetry
+        run: pip install poetry
+      - name: Install dependencies
+        run: poetry install
+      - name: Build hexagents_rust into the backend venv
+        run: |
+          BACKEND_VENV="$(poetry env info --path)"
+          cd ../../rust
+          VIRTUAL_ENV="$BACKEND_VENV" "$BACKEND_VENV/bin/maturin" develop --release
+      - name: Assert the module actually loaded (fail loud, not a silent skip)
+        run: |
+          poetry run python -c "
+          import hexagents_rust
+          assert hexagents_rust.free_estimate_usd() == 0.0
+          assert hexagents_rust.format_trajectory('m', True, 't', [('human', 'hi')])
+          assert hexagents_rust.parse_chat_response({'choices': [{'message': {'content': 'ok'}}]})
+          "
+      - name: Run the parity tests
+        run: |
+          poetry run pytest \
+            hexagents/tests/unit/test_cost_estimator_parity.py \
+            hexagents/tests/unit/test_rust_cost_estimator.py \
+            hexagents/tests/unit/test_arg_coercion_parity.py \
+            hexagents/tests/unit/test_arg_coercer_rust.py \
+            hexagents/tests/unit/test_trajectory_parity.py \
+            hexagents/tests/unit/test_trajectory_compat.py \
+            hexagents/tests/unit/test_trajectory_rust.py \
+            hexagents/tests/unit/test_jsonl.py \
+            hexagents/tests/unit/test_chat_rust.py \
+            hexagents/tests/unit/test_chat_parity.py \
+            hexagents/tests/unit/test_chat_completions.py \
+            -v

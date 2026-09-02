@@ -1,0 +1,230 @@
+# Intent examples — feeds tool ranking (BM25), few-shot PlannerAgent, intent
+# classification tests. One key per use case (snake_case) with the exact MCP
+# tool name and >= 5 question variants (technical, vague, business, direct,
+# question style).
+session_search:
+  tool: session_search
+  questions:
+    - "What did I discuss about the k8s deployment?"
+    - "Search my past conversations for 'deepseek api'"
+    - "Find sessions where I talked about the agent loop"
+    - "Show me context from my earlier session"
+    - "Tell me what I said about memory distillation"
+
+toolset_resolve:
+  tool: toolset_resolve
+  questions:
+    - "Which tools are enabled for a full-stack session?"
+    - "Show me the default toolset for this agent"
+    - "What tools do I get with the web toolset?"
+    - "Resolve the tools for the terminal bundle"
+    - "List the tools enabled in this session"
+
+trajectory_save:
+  tool: trajectory_save
+  questions:
+    - "Save the trajectory of this turn"
+    - "Record the transcript for replay"
+    - "Log this failed run as a trajectory"
+    - "Persist the conversation in ShareGPT format"
+    - "Audit what the agent did this turn"
+
+agent_run:
+  tool: agent_run
+  questions:
+    - "Stop the agent if it runs too long"
+    - "Set a budget on this turn"
+    - "Interrupt the current run"
+    - "Cap how many iterations this agent does"
+    - "Halt the loop now"
+
+retry_llm:
+  tool: agent_run
+  questions:
+    - "Retry the LLM call automatically on a rate limit"
+    - "Make the provider resilient to transient 5xx failures"
+    - "Back off and retry when DeepSeek times out"
+    - "Re-attempt the turn if the first completion fails"
+    - "Add automatic retry with jittered backoff"
+
+reasoning_effort:
+  tool: agent_run
+  questions:
+    - "Run the agent at maximum reasoning effort"
+    - "Lower the reasoning effort to save tokens"
+    - "Which effort levels does this provider support?"
+    - "Set a high reasoning effort for this turn"
+    - "Clamp the reasoning effort to what the model accepts"
+
+chat_interface:
+  tool: chat
+  questions:
+    - "Ask the agent a question and get the final answer"
+    - "Chat and only show me the final reply"
+    - "Give me a one-shot answer to this"
+    - "What does the agent say?"
+    - "Quick answer for the CLI"
+
+think_scrubber:
+  tool: agent_run
+  questions:
+    - "Hide the agent's reasoning from the visible transcript"
+    - "Scrub thinking tags out of the streamed answer"
+    - "Don't let <think> blocks leak into the output"
+    - "Extract the reasoning from this response"
+    - "Strip reasoning from the visible text"
+
+empty_response_guard:
+  tool: agent_run
+  questions:
+    - "Don't burn retries when the model keeps answering with zero output"
+    - "Stop retrying a completion that produced nothing twice in a row"
+    - "Skip useless LLM retries on a deterministic empty response"
+    - "Avoid paying twice for a provider that answers nothing"
+    - "Why does the agent keep retrying an empty answer? Detect it early"
+
+read_file:
+  tool: read_file
+  questions:
+    - "Read src/main.py and show me its contents."
+    - "What's in the config file at path ./app/settings.py?"
+    - "Open the README in this repository for me."
+    - "Show me the first 100k chars of the agent loop source."
+    - "Peek at the file at /repo/tests/test_loader.py."
+    - "Can you read the main entry point of this project?"
+
+write_file:
+  tool: write_file
+  questions:
+    - "Write this new function to src/helpers.py."
+    - "Persist this config snippet into ./app/settings.py."
+    - "Create a README with this content for me."
+    - "Save the following markdown into docs/notes.md."
+    - "Add this line to the end of src/main.py."
+
+search_files:
+  tool: search_files
+  questions:
+    - "Find where the agent loop class is defined in src/."
+    - "Search the codebase for 'ToolExecutor' occurrences."
+    - "List all Python files mentioning 'credential'."
+    - "Where do I use resolve_path in the backend?"
+    - "Show me the files that import ToolAdapter."
+
+patch:
+  tool: patch
+  questions:
+    - "Update the return value in src/main.py."
+    - "Apply this diff to the agent loop source."
+    - "Add this function to helpers.py with a patch."
+    - "Change the config default in settings.py."
+    - "Patch the error handling block in loader.py."
+
+terminal:
+  tool: terminal
+  questions:
+    - "Run `ls -la` in the workspace."
+    - "List the git status of this repo."
+    - "Run the tests and show me the output."
+    - "What does `python --version` return?"
+    - "Execute the build script here."
+
+terminal_docker:
+  tool: terminal
+  questions:
+    - "Run `kubectl get pods` in a python container."
+    - "Execute this command inside a docker container."
+    - "Run the build in an ephemeral container from python:3.12."
+    - "Use docker to run the tests here."
+
+process_background:
+  tool: terminal
+  questions:
+    - "Run the test suite in the background and give me an id."
+    - "Start `pytest -v` without blocking the loop."
+    - "Spawn a background build and tell me its session id."
+    - "Launch the long job in the background and poll it."
+
+execute_code:
+  tool: execute_code
+  questions:
+    - "Run this Python snippet to summarize the files."
+    - "Execute a script that calls read_file on src/main.py."
+    - "Run a small Python program to compute the total."
+    - "Use a script to search the codebase and print matches."
+
+todo_plan:
+  tool: todo
+  questions:
+    - "Plan the steps to refactor the agent loop."
+    - "Track my multi-step task with a todo list."
+    - "Set up a checklist for this feature."
+    - "Mark the first task in progress and add the next."
+    - "Show me the current plan."
+
+clarify_ask:
+  tool: clarify
+  questions:
+    - "Ask me which option to pick."
+    - "Clarify with the user which approach to take."
+    - "Present me the choices and let me decide."
+    - "Wait for my input before continuing."
+
+web_search:
+  tool: web_search
+  questions:
+    - "Search the web for the latest Python 3.13 release."
+    - "Find current info on the k8s gateway design."
+    - "Look up the OpenRouter model catalog online."
+    - "What's the latest about the DeepSeek API?"
+
+web_extract:
+  tool: web_extract
+  questions:
+    - "Extract the content of this documentation page."
+    - "Read the article at this URL in markdown."
+    - "Pull clean text from these blog links."
+    - "Extract the main content of the spec page."
+
+browser_navigate:
+  tool: browser_navigate
+  questions:
+    - "Open https://example.com in the browser."
+    - "Navigate the browser to the docs page."
+    - "Load this URL in a browser session."
+
+browser_snapshot:
+  tool: browser_snapshot
+  questions:
+    - "Capture the current page accessibility snapshot."
+    - "What is on the screen right now?"
+    - "Snapshot the browser's current page."
+
+browser_click:
+  tool: browser_click
+  questions:
+    - "Click the submit button."
+    - "Click the element with id #submit."
+    - "Tap on the login link."
+
+browser_type:
+  tool: browser_type
+  questions:
+    - "Type 'python' into the search field."
+    - "Fill the input with this text."
+
+browser_scroll:
+  tool: browser_scroll
+  questions:
+    - "Scroll down the page."
+    - "Scroll to the bottom of the article."
+
+browser_back:
+  tool: browser_back
+  questions:
+    - "Go back to the previous page."
+
+browser_press:
+  tool: browser_press
+  questions:
+    - "Press Enter in the browser."

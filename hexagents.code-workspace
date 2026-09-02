@@ -1,0 +1,13 @@
+{
+  "folders": [
+    { "path": "src/backend", "name": "backend" },
+    { "path": "rust", "name": "rust" },
+    { "path": "react", "name": "react" },
+    { "path": "flutter", "name": "flutter" },
+    { "path": ".", "name": "root" },
+  ],
+  "settings": {
+    "python.defaultInterpreterPath": "src/backend/.venv/bin/python",
+    "liveServer.settings.multiRootWorkspaceName": "root",
+  },
+}

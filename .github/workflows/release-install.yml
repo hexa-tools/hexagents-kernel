@@ -1,0 +1,34 @@
+name: release-install
+
+# Publishes the integrity of scripts/install.sh at every release tag (v*).
+# The script source is served from a pinned release tag — never main — so a
+# mid-edit install never breaks. Only the .sha256 is generated here; the actual
+# hosting (GitHub Pages / install.hexagents.dev) publishes scripts/install.sh
+# from the matching tag.
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  publish-install-sha:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate install.sh
+        run: bash -n scripts/install.sh
+
+      - name: Compute SHA-256
+        run: |
+          sha256sum scripts/install.sh | awk '{print $1 "  my_install.sh"}' > scripts/install.sh.sha256
+
+      - name: Show integrity file
+        run: cat scripts/install.sh.sha256
+
+      - name: Upload SHA-256 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: install-sh-sha256
+          path: scripts/install.sh.sha256
+          if-no-files-found: error

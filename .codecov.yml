@@ -1,0 +1,43 @@
+# HexAgents — Codecov configuration
+# Components tracked per layer. Coverage is enforced at >= 95% (see CI
+# --cov-fail-under) and mirrored here as the project/component targets.
+
+comment:
+  layout: "reach, diff, flags, components"
+  require_changes: false
+
+coverage:
+  status:
+    project:
+      default:
+        target: 95%
+        threshold: 0%
+    patch:
+      default:
+        target: 95%
+
+component_management:
+  individual_components:
+    - component_id: domain
+      name: Domain
+      paths:
+        - src/backend/hexagents/domain/**
+    - component_id: application
+      name: Application
+      paths:
+        - src/backend/hexagents/application/**
+    - component_id: adapters
+      name: Adapters
+      paths:
+        - src/backend/hexagents/infrastructure/adapters/**
+    - component_id: tests
+      name: Tests
+      paths:
+        - src/backend/hexagents/tests/**
+    - component_id: cli
+      name: CLI
+      paths:
+        - src/backend/hexagents/infrastructure/presenters/cli/**
+
+ignore:
+  - "**/__init__.py"
